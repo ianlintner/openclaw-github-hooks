@@ -6,6 +6,8 @@ import hmac
 
 def verify_signature(payload: bytes, secret: str, signature_header: str | None) -> bool:
     """Validate the X-Hub-Signature-256 header against the raw request body."""
+    if not secret:
+        return False
     if not signature_header or not signature_header.startswith("sha256="):
         return False
     expected = "sha256=" + hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()

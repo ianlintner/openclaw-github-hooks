@@ -30,3 +30,14 @@ def test_missing_header_fails():
 def test_wrong_prefix_fails():
     sig = _sign(BODY, SECRET).replace("sha256=", "sha1=")
     assert verify_signature(BODY, SECRET, sig) is False
+
+
+def test_empty_secret_fails():
+    # An empty secret must never validate, even a "correctly" signed request.
+    assert verify_signature(BODY, "", _sign(BODY, "")) is False
+
+
+def test_sha256_prefix_with_wrong_hash_fails():
+    # Passes the prefix guard but must fail the constant-time compare.
+    wrong = "sha256=" + "0" * 64
+    assert verify_signature(BODY, SECRET, wrong) is False

@@ -29,6 +29,7 @@ def create_app() -> FastAPI:
         token=os.environ.get("GH_HOOKS_OPENCLAW_TOKEN", ""),
         agent_id=os.environ.get("GH_HOOKS_AGENT_ID", ""),
         model=os.environ.get("GH_HOOKS_MODEL", ""),
+        instructions=os.environ.get("GH_HOOKS_INSTRUCTIONS", ""),
     )
     dedup = DeliveryDedup()
     stats = {

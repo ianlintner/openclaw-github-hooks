@@ -68,19 +68,26 @@ def build_message(summary: dict) -> str:
 
 class Forwarder:
     def __init__(self, mode: str, url: str, token: str,
-                 agent_id: str = "", model: str = ""):
+                 agent_id: str = "", model: str = "", instructions: str = ""):
         self.mode = mode
         self.url = url
         self.token = token
         self.agent_id = agent_id
         self.model = model
+        self.instructions = instructions
 
     def forward(self, summary: dict) -> bool:
-        message = build_message(summary)
+        summary_line = build_message(summary)
+        # openclaw has no per-agent system prompt in config, so the PR-review
+        # instructions ride in the message (scoped to this turn only). Logs keep
+        # the short summary; the payload carries the full instruction block.
+        payload_message = summary_line
+        if self.instructions:
+            payload_message = f"{self.instructions}\n\nEvent: {summary_line}"
         if self.mode != "openclaw":
-            log.info("FORWARD(log-only): %s", message)
+            log.info("FORWARD(log-only): %s", summary_line)
             return True
-        body = {"message": message, "name": "github"}
+        body = {"message": payload_message, "name": "github"}
         if self.agent_id:
             body["agentId"] = self.agent_id
         if self.model:
@@ -93,8 +100,8 @@ class Forwarder:
                 timeout=5.0,
             )
             resp.raise_for_status()
-            log.info("FORWARD(openclaw %s): %s", resp.status_code, message)
+            log.info("FORWARD(openclaw %s): %s", resp.status_code, summary_line)
             return True
         except httpx.HTTPError as exc:
-            log.error("forward failed: %s — %s", exc, message)
+            log.error("forward failed: %s — %s", exc, summary_line)
             return False

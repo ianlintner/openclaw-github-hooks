@@ -70,3 +70,22 @@ def test_openclaw_payload_includes_agent_and_model(monkeypatch):
     assert captured["json"]["model"] == "claude-sonnet-4-6"
     assert captured["json"]["name"] == "github"
     assert "message" in captured["json"]
+
+
+def test_instructions_prepended_to_payload_message(monkeypatch):
+    captured = {}
+
+    class _Resp:
+        status_code = 200
+        def raise_for_status(self): pass
+
+    import openclaw_github_hooks.forwarder as fwd_mod
+    monkeypatch.setattr(fwd_mod.httpx, "post",
+                        lambda url, json, headers, timeout: captured.update(json=json) or _Resp())
+    fwd = fwd_mod.Forwarder(mode="openclaw", url="http://x/hooks/agent", token="t",
+                            instructions="REVIEW THIS PR")
+    fwd.forward({"event": "pull_request", "action": "opened", "repo": "r", "number": 1,
+                 "title": "t", "url": "u", "sender": "s", "head_sha": "h",
+                 "conclusion": None, "delivery_id": "d"})
+    assert captured["json"]["message"].startswith("REVIEW THIS PR")
+    assert "Event:" in captured["json"]["message"]

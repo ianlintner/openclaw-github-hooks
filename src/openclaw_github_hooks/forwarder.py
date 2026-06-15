@@ -67,20 +67,28 @@ def build_message(summary: dict) -> str:
 
 
 class Forwarder:
-    def __init__(self, mode: str, url: str, token: str):
+    def __init__(self, mode: str, url: str, token: str,
+                 agent_id: str = "", model: str = ""):
         self.mode = mode
         self.url = url
         self.token = token
+        self.agent_id = agent_id
+        self.model = model
 
     def forward(self, summary: dict) -> bool:
         message = build_message(summary)
         if self.mode != "openclaw":
             log.info("FORWARD(log-only): %s", message)
             return True
+        body = {"message": message, "name": "github"}
+        if self.agent_id:
+            body["agentId"] = self.agent_id
+        if self.model:
+            body["model"] = self.model
         try:
             resp = httpx.post(
                 self.url,
-                json={"message": message, "name": "github"},
+                json=body,
                 headers={"Authorization": f"Bearer {self.token}"},
                 timeout=5.0,
             )

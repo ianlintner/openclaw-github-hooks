@@ -56,3 +56,33 @@ def test_unlisted_action_drops():
 def test_draft_pr_drops():
     d = evaluate("pull_request", _pr_payload(draft=True), ALLOW)
     assert d.forward is False and d.reason == "draft-pr"
+
+
+def test_bot_sender_workflow_run_completed_forwards():
+    # CI outcome on the agent's own bot push must reach the agent.
+    payload = {
+        "action": "completed",
+        "repository": {"full_name": "ianlintner/caretaker-qa"},
+        "sender": {"login": "care-taker-bot[bot]"},
+        "workflow_run": {"name": "CI", "conclusion": "failure", "head_sha": "abc1234",
+                         "html_url": "u"},
+    }
+    d = evaluate("workflow_run", payload, ALLOW)
+    assert d.forward is True
+
+
+def test_bot_sender_check_suite_completed_forwards():
+    payload = {
+        "action": "completed",
+        "repository": {"full_name": "ianlintner/caretaker-qa"},
+        "sender": {"login": "github-actions[bot]"},
+        "check_suite": {"conclusion": "failure", "head_sha": "abc1234"},
+    }
+    d = evaluate("check_suite", payload, ALLOW)
+    assert d.forward is True
+
+
+def test_bot_sender_pull_request_still_drops():
+    # The agent must NOT react to its own PR edits.
+    d = evaluate("pull_request", _pr_payload(sender="care-taker-bot[bot]"), ALLOW)
+    assert d.forward is False and d.reason.startswith("bot-sender")

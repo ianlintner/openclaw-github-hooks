@@ -44,8 +44,11 @@ def evaluate(
     if not repo_allowed(repo, allowed_repos):
         return Decision(False, f"repo-not-allowed:{repo or 'unknown'}")
 
+    # CI-outcome events must reach the agent even when its own bot push triggered
+    # them; only drop bot-authored PR/review/comment noise (its own edits).
     sender = ((payload.get("sender") or {}).get("login")) or ""
-    if sender.endswith("[bot]"):
+    BOT_DROP_EVENTS = {"pull_request", "pull_request_review", "issue_comment"}
+    if sender.endswith("[bot]") and event in BOT_DROP_EVENTS:
         return Decision(False, f"bot-sender:{sender}")
 
     if event not in allowed_events:

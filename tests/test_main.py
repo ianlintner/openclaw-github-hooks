@@ -78,3 +78,21 @@ def test_stats_counters(client):
     assert stats["received"] == 2
     assert stats["forwarded"] == 1
     assert stats["filtered"] == 1
+
+
+def test_forwarder_built_with_agent_and_model(monkeypatch):
+    monkeypatch.setenv("GITHUB_WEBHOOK_SECRET", SECRET)
+    monkeypatch.setenv("GH_HOOKS_ALLOWED_REPOS", "ianlintner/caretaker-qa")
+    monkeypatch.setenv("GH_HOOKS_FORWARD_MODE", "log")
+    monkeypatch.setenv("GH_HOOKS_AGENT_ID", "pr-reviewer")
+    monkeypatch.setenv("GH_HOOKS_MODEL", "claude-sonnet-4-6")
+    import openclaw_github_hooks.main as m
+    captured = {}
+    real = m.Forwarder
+    def _spy(*a, **k):
+        captured.update(k)
+        return real(*a, **k)
+    monkeypatch.setattr(m, "Forwarder", _spy)
+    m.create_app()
+    assert captured.get("agent_id") == "pr-reviewer"
+    assert captured.get("model") == "claude-sonnet-4-6"
